@@ -358,8 +358,7 @@ else:
 
             result["tests"].append(test_result)
 
-
-json.dumps(result)
+RESULT_JSON = json.dumps(result)
 `;
 
 async function initialise() {
@@ -380,13 +379,32 @@ self.onmessage = async (event) => {
         pyodide.globals.set("SOURCE_CODE", message.source);
         pyodide.globals.set("TEST_CASES_JSON", JSON.stringify(message.tests));
         pyodide.globals.set("ASSIGNMENT_ID", message.assignmentId);
-        const returnedValue = await pyodide.runPythonAsync(MARKER_SCRIPT);
-        const resultJson = typeof returnedValue === "string"
-            ? returnedValue
-            : returnedValue?.toString?.();
+        // Clear any stale result from an earlier run.
+        try {
+            pyodide.globals.delete("RESULT_JSON");
+        } catch {
+            // The variable may not exist yet.
+        }
 
-        if (!resultJson) {
-            throw new Error("The Python marker completed but returned no result.");
+        await pyodide.runPythonAsync(MARKER_SCRIPT);
+
+        const resultValue = pyodide.globals.get("RESULT_JSON");
+        let resultJson;
+
+        if (typeof resultValue === "string") {
+            resultJson = resultValue;
+        } else if (resultValue && typeof resultValue.toJs === "function") {
+            resultJson = resultValue.toJs();
+        } else if (resultValue !== undefined && resultValue !== null) {
+            resultJson = String(resultValue);
+        }
+
+        if (resultValue && typeof resultValue.destroy === "function") {
+            resultValue.destroy();
+        }
+
+        if (!resultJson || resultJson === "undefined") {
+            throw new Error("The Python marker completed but did not return a JSON result.");
         }
 
         self.postMessage({

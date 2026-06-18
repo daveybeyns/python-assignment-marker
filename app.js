@@ -742,7 +742,7 @@ function startWorker() {
         rejectWorkerReady = reject;
     });
 
-    worker = new Worker("marker-worker.js?v=20260618d", { type: "module" });
+    worker = new Worker("marker-worker.js?v=20260618g", { type: "module" });
 
     worker.onmessage = (event) => {
         const message = event.data;
