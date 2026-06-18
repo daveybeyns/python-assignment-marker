@@ -1,7 +1,16 @@
-import { TEST_CASES, RUBRIC, assessSubmission, createFeedbackText } from "./rubric.js";
+import {
+    ASSIGNMENTS,
+    DEFAULT_ASSIGNMENT_ID,
+    getAssignment,
+    assessSubmission,
+    createFeedbackText
+} from "./rubric.js";
 
 const elements = {
     runtimeStatus: document.getElementById("runtimeStatus"),
+    headerAssignmentTitle: document.getElementById("headerAssignmentTitle"),
+    assignmentSelect: document.getElementById("assignmentSelect"),
+    assignmentSummary: document.getElementById("assignmentSummary"),
     dropZone: document.getElementById("dropZone"),
     fileInput: document.getElementById("fileInput"),
     markAllButton: document.getElementById("markAllButton"),
@@ -28,6 +37,7 @@ const elements = {
 };
 
 const state = {
+    assignmentId: DEFAULT_ASSIGNMENT_ID,
     submissions: [],
     selectedId: null,
     marking: false,
@@ -41,9 +51,35 @@ let rejectWorkerReady = null;
 let requestCounter = 0;
 const pendingRequests = new Map();
 
+function currentAssignment() {
+    return getAssignment(state.assignmentId);
+}
+
+function assignmentForSubmission(submission) {
+    return getAssignment(submission?.assignmentId || state.assignmentId);
+}
+
 function setRuntimeStatus(kind, text) {
     const className = kind === "ready" ? "status-ready" : kind === "error" ? "status-error" : "status-loading";
     elements.runtimeStatus.innerHTML = `<span class="status-dot ${className}"></span><span>${escapeHtml(text)}</span>`;
+}
+
+function populateAssignments() {
+    elements.assignmentSelect.innerHTML = Object.values(ASSIGNMENTS).map((assignment) =>
+        `<option value="${escapeHtml(assignment.id)}">${escapeHtml(assignment.title)}</option>`
+    ).join("");
+    elements.assignmentSelect.value = state.assignmentId;
+    renderAssignmentDetails();
+}
+
+function renderAssignmentDetails() {
+    const assignment = currentAssignment();
+    elements.headerAssignmentTitle.textContent = assignment.title;
+    elements.assignmentSummary.innerHTML = `
+        <strong>${escapeHtml(assignment.expectedFileName)}</strong> ·
+        ${escapeHtml(assignment.summary)}
+    `;
+    document.title = `${assignment.shortName} — Python Assignment Marker`;
 }
 
 function startWorker() {
@@ -56,7 +92,7 @@ function startWorker() {
         rejectWorkerReady = reject;
     });
 
-    worker = new Worker("marker-worker.js?v=1.0.1", { type: "module" });
+    worker = new Worker("marker-worker.js", { type: "module" });
 
     worker.onmessage = (event) => {
         const message = event.data;
@@ -83,11 +119,8 @@ function startWorker() {
             if (!pending) return;
             clearTimeout(pending.timeoutId);
             pendingRequests.delete(message.requestId);
-            if (message.type === "result") {
-                pending.resolve(message.result);
-            } else {
-                pending.reject(new Error(message.error));
-            }
+            if (message.type === "result") pending.resolve(message.result);
+            else pending.reject(new Error(message.error));
         }
     };
 
@@ -97,8 +130,9 @@ function startWorker() {
     };
 }
 
-async function evaluateSource(source) {
+async function evaluateSource(source, assignmentId) {
     await workerReadyPromise;
+    const assignment = getAssignment(assignmentId);
     const requestId = ++requestCounter;
 
     return new Promise((resolve, reject) => {
@@ -114,7 +148,8 @@ async function evaluateSource(source) {
             type: "evaluate",
             requestId,
             source,
-            tests: TEST_CASES
+            assignmentId: assignment.id,
+            tests: assignment.testCases
         });
     });
 }
@@ -132,17 +167,25 @@ function cleanStudentName(path, fileName) {
         .replace(/[_-]+/g, " ")
         .replace(/\s+/g, " ")
         .trim();
-    if (!candidate || /^learner profile$/i.test(candidate)) return "Student name";
+
+    if (!candidate || /^(learner profile|cinema ticket|learner profile program|cinema ticket program)$/i.test(candidate)) {
+        return "Student name";
+    }
     return candidate;
 }
 
 async function addPythonFile(fileName, path, code) {
     const normalisedCode = code.replace(/^\uFEFF/, "");
-    const duplicate = state.submissions.some((submission) => submission.path === path && submission.code === normalisedCode);
+    const duplicate = state.submissions.some((submission) =>
+        submission.path === path &&
+        submission.code === normalisedCode &&
+        submission.assignmentId === state.assignmentId
+    );
     if (duplicate) return;
 
     state.submissions.push({
         id: makeId(),
+        assignmentId: state.assignmentId,
         studentName: cleanStudentName(path, fileName),
         fileName,
         path,
@@ -173,7 +216,9 @@ async function processFiles(fileList) {
                 if (!window.JSZip) throw new Error("ZIP support did not load.");
                 const zip = await window.JSZip.loadAsync(file);
                 const entries = Object.values(zip.files).filter((entry) =>
-                    !entry.dir && entry.name.toLowerCase().endsWith(".py") && !entry.name.startsWith("__MACOSX/")
+                    !entry.dir &&
+                    entry.name.toLowerCase().endsWith(".py") &&
+                    !entry.name.startsWith("__MACOSX/")
                 );
                 if (!entries.length) warnings.push(`${file.name} contained no Python files.`);
                 for (const entry of entries) {
@@ -189,9 +234,7 @@ async function processFiles(fileList) {
         }
     }
 
-    if (!state.selectedId && state.submissions.length) {
-        state.selectedId = state.submissions[0].id;
-    }
+    if (!state.selectedId && state.submissions.length) state.selectedId = state.submissions[0].id;
     elements.fileInput.value = "";
     renderAll();
     if (warnings.length) window.alert(warnings.join("\n"));
@@ -203,7 +246,15 @@ function getSelectedSubmission() {
 
 function adjustedTotal(submission) {
     if (!submission?.assessment) return 0;
-    return RUBRIC.reduce((sum, item) => sum + Number(submission.adjustedScores[item.id] ?? submission.assessment.criteria[item.id].suggested), 0);
+    const assignment = assignmentForSubmission(submission);
+    return assignment.rubric.reduce(
+        (sum, item) => sum + Number(
+            submission.adjustedScores[item.id] ??
+            submission.assessment.criteria[item.id]?.suggested ??
+            0
+        ),
+        0
+    );
 }
 
 function markedSubmissions() {
@@ -217,20 +268,23 @@ function updateButtons() {
     elements.clearButton.disabled = !hasSubmissions || state.marking;
     elements.downloadCsvButton.disabled = !hasMarked || state.marking;
     elements.downloadReportsButton.disabled = !hasMarked || state.marking;
+    elements.assignmentSelect.disabled = state.marking;
 }
 
 function renderSummary() {
+    const assignment = currentAssignment();
     const total = state.submissions.length;
     const marked = markedSubmissions();
     elements.submissionCount.textContent = String(total);
+
     if (!total) {
-        elements.classSummary.textContent = "No submissions loaded";
+        elements.classSummary.textContent = `No ${assignment.shortName} submissions loaded`;
     } else if (!marked.length) {
         elements.classSummary.textContent = `${total} submission${total === 1 ? "" : "s"} loaded · not yet marked`;
     } else {
         const average = marked.reduce((sum, submission) => sum + adjustedTotal(submission), 0) / marked.length;
         const reviewCount = marked.filter((submission) => submission.assessment.status !== "complete").length;
-        elements.classSummary.textContent = `${marked.length}/${total} marked · average ${average.toFixed(1)}/24${reviewCount ? ` · ${reviewCount} need review` : ""}`;
+        elements.classSummary.textContent = `${marked.length}/${total} marked · average ${average.toFixed(1)}/${assignment.maxScore}${reviewCount ? ` · ${reviewCount} need review` : ""}`;
     }
     updateButtons();
 }
@@ -242,8 +296,9 @@ function renderSubmissionList() {
     }
 
     elements.submissionList.innerHTML = state.submissions.map((submission) => {
+        const assignment = assignmentForSubmission(submission);
         const active = submission.id === state.selectedId ? " active" : "";
-        const score = submission.assessment ? `${adjustedTotal(submission)}/24` : "—";
+        const score = submission.assessment ? `${adjustedTotal(submission)}/${assignment.maxScore}` : "—";
         const status = submission.status || "queued";
         return `
             <button class="submission-item${active}" type="button" data-id="${escapeHtml(submission.id)}">
@@ -266,17 +321,19 @@ function renderSubmissionList() {
 }
 
 function renderPending(submission) {
+    const assignment = assignmentForSubmission(submission);
     elements.resultContent.hidden = true;
     elements.emptyState.hidden = false;
     elements.emptyState.innerHTML = `
         <div class="empty-icon">.py</div>
         <h2>${escapeHtml(submission.studentName)}</h2>
-        <p><code>${escapeHtml(submission.fileName)}</code> is loaded and waiting to be marked.</p>
+        <p><code>${escapeHtml(submission.fileName)}</code> is loaded for <strong>${escapeHtml(assignment.shortName)}</strong> and waiting to be marked.</p>
     `;
 }
 
 function renderRubric(submission) {
-    elements.rubricResults.innerHTML = RUBRIC.map((rubricItem) => {
+    const assignment = assignmentForSubmission(submission);
+    elements.rubricResults.innerHTML = assignment.rubric.map((rubricItem) => {
         const result = submission.assessment.criteria[rubricItem.id];
         const adjusted = Number(submission.adjustedScores[rubricItem.id] ?? result.suggested);
         const options = [0, 1, 2, 3, 4].map((score) =>
@@ -348,8 +405,9 @@ function renderTestRuns(submission) {
 }
 
 function renderTotals(submission) {
-    elements.adjustedTotal.textContent = `${adjustedTotal(submission)}/24`;
-    elements.suggestedTotal.textContent = `Suggested: ${submission.assessment.suggestedTotal}/24`;
+    const assignment = assignmentForSubmission(submission);
+    elements.adjustedTotal.textContent = `${adjustedTotal(submission)}/${assignment.maxScore}`;
+    elements.suggestedTotal.textContent = `Suggested: ${submission.assessment.suggestedTotal}/${assignment.maxScore}`;
 }
 
 function renderResult() {
@@ -389,6 +447,7 @@ function renderResult() {
 }
 
 function renderAll() {
+    renderAssignmentDetails();
     renderSubmissionList();
     renderSummary();
     renderResult();
@@ -403,10 +462,11 @@ async function markSubmission(submission) {
 
     let raw;
     try {
-        raw = await evaluateSource(submission.code);
+        raw = await evaluateSource(submission.code, submission.assignmentId);
     } catch (error) {
         if (error.code === "TIMEOUT") {
             raw = {
+                assignmentId: submission.assignmentId,
                 syntax: { ok: true, error: null },
                 policy: { safe: true, issues: [] },
                 static: {},
@@ -415,6 +475,7 @@ async function markSubmission(submission) {
             };
         } else {
             raw = {
+                assignmentId: submission.assignmentId,
                 syntax: { ok: false, error: null },
                 policy: { safe: true, issues: [] },
                 static: {},
@@ -425,8 +486,9 @@ async function markSubmission(submission) {
     }
 
     submission.rawResult = raw;
-    submission.assessment = assessSubmission(raw);
-    for (const rubricItem of RUBRIC) {
+    submission.assessment = assessSubmission(raw, submission.assignmentId);
+    const assignment = assignmentForSubmission(submission);
+    for (const rubricItem of assignment.rubric) {
         submission.adjustedScores[rubricItem.id] = submission.assessment.criteria[rubricItem.id].suggested;
     }
     submission.status = submission.assessment.status;
@@ -457,16 +519,18 @@ function csvCell(value) {
 }
 
 function buildCsv() {
+    const assignment = currentAssignment();
     const headers = [
-        "Student", "File", "Status",
-        ...RUBRIC.map((item) => item.shortTitle),
+        "Assignment", "Student", "File", "Status",
+        ...assignment.rubric.map((item) => item.shortTitle),
         "Total", "Teacher notes"
     ];
     const rows = markedSubmissions().map((submission) => [
+        assignmentForSubmission(submission).title,
         submission.studentName,
         submission.fileName,
         submission.assessment.status,
-        ...RUBRIC.map((item) => submission.adjustedScores[item.id]),
+        ...assignment.rubric.map((item) => submission.adjustedScores[item.id]),
         adjustedTotal(submission),
         submission.notes || ""
     ]);
@@ -481,7 +545,8 @@ function safeFileName(name) {
 }
 
 function buildReportHtml(submission) {
-    const rubricRows = RUBRIC.map((item) => {
+    const assignment = assignmentForSubmission(submission);
+    const rubricRows = assignment.rubric.map((item) => {
         const result = submission.assessment.criteria[item.id];
         const score = submission.adjustedScores[item.id];
         const evidenceRows = result.evidence.map((entry) => {
@@ -510,7 +575,7 @@ function buildReportHtml(submission) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>${escapeHtml(submission.studentName)} — Python marking report</title>
+<title>${escapeHtml(submission.studentName)} — ${escapeHtml(assignment.reportTitle)} marking report</title>
 <style>
 body{margin:0;background:#f1f3f5;color:#222;font-family:Arial,Helvetica,sans-serif}.wrap{max-width:980px;margin:24px auto;background:#fff;border:1px solid #ddd;border-radius:12px;overflow:hidden}.header{padding:22px 26px;background:linear-gradient(135deg,#ed0a4f,#c9003f);color:#fff}.header h1{margin:0 0 5px}.header p{margin:3px 0}.content{padding:22px}.score{font-size:26px;font-weight:bold;color:#c9003f}.criterion,.test{margin:0 0 12px;padding:15px;border:1px solid #dfe3e7;border-radius:9px}.criterion-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.criterion h2,.test h2{margin:0;font-size:17px}.criterion-heading span{padding:5px 9px;border-radius:7px;background:#222;color:#fff;font-weight:bold}.criterion ul{margin:10px 0;padding-left:22px}.criterion li{margin:5px 0;line-height:1.4}.level{margin:8px 0 0;color:#555}.notes{padding:15px;border:2px dashed #ed0a4f;border-radius:9px;background:#fff7f9;white-space:pre-wrap}pre{overflow:auto;padding:12px;border-radius:7px;background:#1e1e1e;color:#d4d4d4;font-family:Consolas,'Courier New',monospace;white-space:pre-wrap}.error{color:#b00020;font-weight:bold}.footer{padding:0 22px 22px;color:#68707c;font-size:12px}
 </style>
@@ -519,11 +584,12 @@ body{margin:0;background:#f1f3f5;color:#222;font-family:Arial,Helvetica,sans-ser
 <div class="wrap">
     <header class="header">
         <h1>Python Assignment Marking Report</h1>
+        <p><strong>Assignment:</strong> ${escapeHtml(assignment.title)}</p>
         <p><strong>Student:</strong> ${escapeHtml(submission.studentName)}</p>
         <p><strong>File:</strong> ${escapeHtml(submission.fileName)}</p>
     </header>
     <main class="content">
-        <p class="score">Final rubric score: ${adjustedTotal(submission)}/24</p>
+        <p class="score">Final rubric score: ${adjustedTotal(submission)}/${assignment.maxScore}</p>
         ${rubricRows}
         <h2>Teacher notes</h2>
         <div class="notes">${escapeHtml(submission.notes?.trim() || "No additional teacher notes entered.")}</div>
@@ -553,13 +619,20 @@ async function downloadAllReports() {
         window.alert("ZIP support is unavailable. Refresh the page and try again.");
         return;
     }
+    const assignment = currentAssignment();
     const zip = new window.JSZip();
-    zip.file("class-summary.csv", buildCsv());
+    zip.file(`${assignment.slug}-class-summary.csv`, buildCsv());
     for (const submission of markedSubmissions()) {
         zip.file(`reports/${safeFileName(submission.studentName)}-report.html`, buildReportHtml(submission));
     }
     const blob = await zip.generateAsync({ type: "blob" });
-    downloadBlob(blob, "python-marking-reports.zip", "application/zip");
+    downloadBlob(blob, `${assignment.slug}-marking-reports.zip`, "application/zip");
+}
+
+function clearLoadedSubmissions() {
+    state.submissions = [];
+    state.selectedId = null;
+    elements.fileInput.value = "";
 }
 
 function escapeHtml(value) {
@@ -572,6 +645,20 @@ function escapeHtml(value) {
 }
 
 // Events
+elements.assignmentSelect.addEventListener("change", () => {
+    const requestedId = elements.assignmentSelect.value;
+    if (state.submissions.length) {
+        const confirmed = window.confirm("Changing assignment will clear the currently loaded submissions and unsaved marking adjustments. Continue?");
+        if (!confirmed) {
+            elements.assignmentSelect.value = state.assignmentId;
+            return;
+        }
+        clearLoadedSubmissions();
+    }
+    state.assignmentId = requestedId;
+    renderAll();
+});
+
 elements.fileInput.addEventListener("change", (event) => processFiles(event.target.files));
 elements.dropZone.addEventListener("dragover", (event) => {
     event.preventDefault();
@@ -587,8 +674,7 @@ elements.markAllButton.addEventListener("click", markAll);
 elements.clearButton.addEventListener("click", () => {
     if (!state.submissions.length) return;
     if (!window.confirm("Clear all loaded submissions and unsaved marking adjustments?")) return;
-    state.submissions = [];
-    state.selectedId = null;
+    clearLoadedSubmissions();
     renderAll();
 });
 elements.remarkButton.addEventListener("click", async () => {
@@ -628,12 +714,19 @@ elements.copyFeedbackButton.addEventListener("click", async () => {
 elements.downloadReportButton.addEventListener("click", () => {
     const submission = getSelectedSubmission();
     if (!submission?.assessment) return;
-    downloadBlob(buildReportHtml(submission), `${safeFileName(submission.studentName)}-report.html`, "text/html;charset=utf-8");
+    const assignment = assignmentForSubmission(submission);
+    downloadBlob(
+        buildReportHtml(submission),
+        `${safeFileName(submission.studentName)}-${assignment.slug}-report.html`,
+        "text/html;charset=utf-8"
+    );
 });
 elements.downloadCsvButton.addEventListener("click", () => {
-    downloadBlob(buildCsv(), "python-marking-summary.csv", "text/csv;charset=utf-8");
+    const assignment = currentAssignment();
+    downloadBlob(buildCsv(), `${assignment.slug}-marking-summary.csv`, "text/csv;charset=utf-8");
 });
 elements.downloadReportsButton.addEventListener("click", downloadAllReports);
 
+populateAssignments();
 startWorker();
 renderAll();

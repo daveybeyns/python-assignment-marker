@@ -11,6 +11,7 @@ import re
 
 source = SOURCE_CODE
 test_cases = json.loads(TEST_CASES_JSON)
+assignment_id = ASSIGNMENT_ID
 
 GENERIC_NAMES = {
     "a", "b", "c", "x", "y", "z", "n", "num", "var", "variable",
@@ -20,13 +21,28 @@ BANNED_CALLS = {
     "open", "exec", "eval", "compile", "__import__", "globals", "locals",
     "vars", "getattr", "setattr", "delattr", "breakpoint", "help", "exit", "quit"
 }
+COMPARE_NAMES = {
+    ast.Eq: "==",
+    ast.NotEq: "!=",
+    ast.Gt: ">",
+    ast.GtE: ">=",
+    ast.Lt: "<",
+    ast.LtE: "<=",
+    ast.In: "in",
+    ast.NotIn: "not in",
+    ast.Is: "is",
+    ast.IsNot: "is not"
+}
 
 result = {
+    "assignmentId": assignment_id,
     "syntax": {"ok": False, "error": None},
     "policy": {"safe": True, "issues": []},
     "static": {},
     "tests": []
 }
+
+source_lines = source.splitlines()
 
 class MarkerVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -38,6 +54,11 @@ class MarkerVisitor(ast.NodeVisitor):
         self.constants = {"string": 0, "integer": 0, "float": 0, "boolean": 0}
         self.heading_strings = []
         self.issues = []
+        self.if_count = 0
+        self.elif_count = 0
+        self.else_count = 0
+        self.comparison_count = 0
+        self.comparison_operators = []
 
     def collect_target(self, target):
         if isinstance(target, ast.Name):
@@ -63,6 +84,24 @@ class MarkerVisitor(ast.NodeVisitor):
         self.collect_target(node.target)
         self.generic_visit(node)
 
+    def visit_If(self, node):
+        line = source_lines[node.lineno - 1].lstrip() if 0 < node.lineno <= len(source_lines) else ""
+        if line.startswith("elif "):
+            self.elif_count += 1
+        else:
+            self.if_count += 1
+
+        if node.orelse and not (len(node.orelse) == 1 and isinstance(node.orelse[0], ast.If)):
+            self.else_count += 1
+        self.generic_visit(node)
+
+    def visit_Compare(self, node):
+        self.comparison_count += len(node.ops)
+        for operator in node.ops:
+            name = COMPARE_NAMES.get(type(operator), type(operator).__name__)
+            self.comparison_operators.append(name)
+        self.generic_visit(node)
+
     def visit_Import(self, node):
         self.issues.append("import statements are not required for this assignment")
 
@@ -81,6 +120,7 @@ class MarkerVisitor(ast.NodeVisitor):
             self.cast_calls[name] += 1
         elif name == "print":
             self.print_calls += 1
+
         if name in BANNED_CALLS:
             self.issues.append(f"unsupported call: {name}()")
         self.generic_visit(node)
@@ -112,7 +152,7 @@ class MarkerVisitor(ast.NodeVisitor):
             self.constants["float"] += 1
 
 try:
-    tree = ast.parse(source, filename="learner_profile.py")
+    tree = ast.parse(source, filename="submission.py")
     result["syntax"] = {"ok": True, "error": None}
 except SyntaxError as exc:
     location = f"line {exc.lineno}" if exc.lineno else "unknown line"
@@ -120,6 +160,7 @@ except SyntaxError as exc:
         "ok": False,
         "error": f"{exc.msg} ({location})"
     }
+    print(json.dumps(result))
 else:
     visitor = MarkerVisitor()
     visitor.visit(tree)
@@ -145,6 +186,11 @@ else:
         "printCalls": visitor.print_calls,
         "constantCounts": visitor.constants,
         "headingStrings": visitor.heading_strings,
+        "ifCount": visitor.if_count,
+        "elifCount": visitor.elif_count,
+        "elseCount": visitor.else_count,
+        "comparisonCount": visitor.comparison_count,
+        "comparisonOperators": sorted(set(visitor.comparison_operators)),
         "typeEvidence": {
             "string": visitor.constants["string"] > 0 or visitor.input_calls > 0,
             "integer": visitor.constants["integer"] > 0 or visitor.cast_calls["int"] > 0,
@@ -155,21 +201,28 @@ else:
     }
 
     if result["policy"]["safe"]:
-        compiled = compile(tree, "learner_profile.py", "exec")
+        compiled = compile(tree, "submission.py", "exec")
 
         for case in test_cases:
             values = case["values"]
             output_stream = io.StringIO()
             inputs_used = []
             used_keys = set()
-            fallback_order = ["name", "course", "age", "hours"]
 
-            aliases = [
-                ("course", ("course", "subject", "programme", "program")),
-                ("hours", ("hour", "study", "weekly")),
-                ("age", ("age", "old")),
-                ("name", ("name",))
-            ]
+            if assignment_id == "cinema-ticket":
+                fallback_order = ["name", "age"]
+                aliases = [
+                    ("age", ("age", "old")),
+                    ("name", ("name",))
+                ]
+            else:
+                fallback_order = ["name", "course", "age", "hours"]
+                aliases = [
+                    ("course", ("course", "subject", "programme", "program")),
+                    ("hours", ("hour", "study", "weekly")),
+                    ("age", ("age", "old")),
+                    ("name", ("name",))
+                ]
 
             def capture_print(*args, sep=" ", end="\n", file=None, flush=False):
                 text = sep.join(str(item) for item in args) + end
@@ -188,7 +241,7 @@ else:
             def fake_input(prompt=""):
                 key = choose_key(prompt)
                 if key is None:
-                    raise EOFError("The program requested more than four answers")
+                    raise EOFError(f"The program requested more than {len(fallback_order)} answers")
                 used_keys.add(key)
                 value = str(values[key])
                 inputs_used.append({"prompt": str(prompt), "key": key, "value": value})
@@ -271,28 +324,42 @@ else:
             def contains_number(number_text):
                 return re.search(rf"(?<![\d.]){re.escape(str(number_text))}(?![\d.])", output) is not None
 
-            test_result["matches"] = {
-                "name": values["name"].lower() in output_lower,
-                "course": values["course"].lower() in output_lower,
-                "age": contains_number(values["age"]),
-                "hours": contains_number(values["hours"]),
-                "enrolled": "true" in output_lower
-            }
-            test_result["labels"] = {
-                "name": "name" in output_lower,
-                "course": "course" in output_lower,
-                "age": "age" in output_lower,
-                "hours": "hour" in output_lower or "study" in output_lower,
-                "enrolled": "enrol" in output_lower or "enroll" in output_lower
-            }
-            test_result["heading"] = (
-                "learner profile" in output_lower
-                or "student profile" in output_lower
-                or ("profile" in output_lower and output_lower.count("\n") >= 2)
-            )
+            if assignment_id == "cinema-ticket":
+                expected = case.get("expected", {})
+                test_result["matches"] = {
+                    "name": values["name"].lower() in output_lower,
+                    "ticketType": str(expected.get("ticketType", "")).lower() in output_lower,
+                    "price": contains_number(expected.get("price", ""))
+                }
+                test_result["labels"] = {
+                    "name": "name" in output_lower or "hello" in output_lower or "customer" in output_lower,
+                    "ticket": "ticket" in output_lower,
+                    "price": "price" in output_lower or "£" in output or "gbp" in output_lower
+                }
+            else:
+                test_result["matches"] = {
+                    "name": values["name"].lower() in output_lower,
+                    "course": values["course"].lower() in output_lower,
+                    "age": contains_number(values["age"]),
+                    "hours": contains_number(values["hours"]),
+                    "enrolled": "true" in output_lower
+                }
+                test_result["labels"] = {
+                    "name": "name" in output_lower,
+                    "course": "course" in output_lower,
+                    "age": "age" in output_lower,
+                    "hours": "hour" in output_lower or "study" in output_lower,
+                    "enrolled": "enrol" in output_lower or "enroll" in output_lower
+                }
+                test_result["heading"] = (
+                    "learner profile" in output_lower
+                    or "student profile" in output_lower
+                    or ("profile" in output_lower and output_lower.count("\n") >= 2)
+                )
+
             result["tests"].append(test_result)
 
-json.dumps(result)
+    print(json.dumps(result))
 `;
 
 async function initialise() {
@@ -312,6 +379,7 @@ self.onmessage = async (event) => {
     try {
         pyodide.globals.set("SOURCE_CODE", message.source);
         pyodide.globals.set("TEST_CASES_JSON", JSON.stringify(message.tests));
+        pyodide.globals.set("ASSIGNMENT_ID", message.assignmentId);
         const resultJson = await pyodide.runPythonAsync(MARKER_SCRIPT);
         self.postMessage({
             type: "result",

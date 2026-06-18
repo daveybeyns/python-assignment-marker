@@ -12,7 +12,7 @@
         <div>
             <div class="header-kicker"><span class="tool-badge">LECTURER TOOL</span> Python Crash Course</div>
             <h1>Python Assignment Marker</h1>
-            <p>Do It 1: Learner Profile Program</p>
+            <p id="headerAssignmentTitle">Do It 1: Learner Profile Program</p>
         </div>
         <div class="runtime-status" id="runtimeStatus" aria-live="polite">
             <span class="status-dot status-loading"></span>
@@ -23,6 +23,14 @@
     <main class="app-shell">
         <section class="privacy-note">
             <strong>Local processing:</strong> submitted files are analysed inside this browser tab. They are not uploaded to a server or saved by this page.
+        </section>
+
+        <section class="assignment-panel" aria-labelledby="assignmentLabel">
+            <div>
+                <label id="assignmentLabel" for="assignmentSelect">Assignment to mark</label>
+                <select id="assignmentSelect"></select>
+            </div>
+            <p id="assignmentSummary"></p>
         </section>
 
         <section class="upload-panel" id="dropZone">
