@@ -160,7 +160,6 @@ except SyntaxError as exc:
         "ok": False,
         "error": f"{exc.msg} ({location})"
     }
-    print(json.dumps(result))
 else:
     visitor = MarkerVisitor()
     visitor.visit(tree)
@@ -359,7 +358,8 @@ else:
 
             result["tests"].append(test_result)
 
-    print(json.dumps(result))
+
+json.dumps(result)
 `;
 
 async function initialise() {
@@ -380,7 +380,15 @@ self.onmessage = async (event) => {
         pyodide.globals.set("SOURCE_CODE", message.source);
         pyodide.globals.set("TEST_CASES_JSON", JSON.stringify(message.tests));
         pyodide.globals.set("ASSIGNMENT_ID", message.assignmentId);
-        const resultJson = await pyodide.runPythonAsync(MARKER_SCRIPT);
+        const returnedValue = await pyodide.runPythonAsync(MARKER_SCRIPT);
+        const resultJson = typeof returnedValue === "string"
+            ? returnedValue
+            : returnedValue?.toString?.();
+
+        if (!resultJson) {
+            throw new Error("The Python marker completed but returned no result.");
+        }
+
         self.postMessage({
             type: "result",
             requestId: message.requestId,
