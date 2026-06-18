@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <title>Python Assignment Marker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <div>
+            <div class="header-kicker"><span class="tool-badge">LECTURER TOOL</span> Python Crash Course</div>
+            <h1>Python Assignment Marker</h1>
+            <p>Do It 1: Learner Profile Program</p>
+        </div>
+        <div class="runtime-status" id="runtimeStatus" aria-live="polite">
+            <span class="status-dot status-loading"></span>
+            <span>Preparing Python marker…</span>
+        </div>
+    </header>
+
+    <main class="app-shell">
+        <section class="privacy-note">
+            <strong>Local processing:</strong> submitted files are analysed inside this browser tab. They are not uploaded to a server or saved by this page.
+        </section>
+
+        <section class="upload-panel" id="dropZone">
+            <div class="upload-copy">
+                <h2>Add submissions</h2>
+                <p>Drop Moodle's downloaded submission ZIP here, or choose one or more <code>.py</code> files.</p>
+                <p class="small-note">Only Python files are extracted. Other files in a Moodle ZIP are ignored.</p>
+            </div>
+            <div class="upload-actions">
+                <label class="button button-primary" for="fileInput">Choose files</label>
+                <input id="fileInput" type="file" accept=".py,.zip,application/zip,text/x-python" multiple hidden>
+                <button class="button button-green" id="markAllButton" type="button" disabled>Mark all</button>
+                <button class="button button-muted" id="clearButton" type="button" disabled>Clear</button>
+            </div>
+        </section>
+
+        <section class="toolbar" aria-label="Export tools">
+            <div id="classSummary" class="class-summary">No submissions loaded</div>
+            <div class="toolbar-actions">
+                <button class="button button-outline" id="downloadCsvButton" type="button" disabled>Download CSV</button>
+                <button class="button button-outline" id="downloadReportsButton" type="button" disabled>Download reports ZIP</button>
+            </div>
+        </section>
+
+        <section class="workspace">
+            <aside class="submission-sidebar">
+                <div class="sidebar-heading">
+                    <h2>Submissions</h2>
+                    <span id="submissionCount" class="count-badge">0</span>
+                </div>
+                <div id="submissionList" class="submission-list">
+                    <div class="empty-sidebar">Uploaded files will appear here.</div>
+                </div>
+            </aside>
+
+            <section class="result-panel" id="resultPanel">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">&lt;/&gt;</div>
+                    <h2>No submission selected</h2>
+                    <p>Add a Moodle ZIP or Python file, then select <strong>Mark all</strong>.</p>
+                </div>
+
+                <div id="resultContent" class="result-content" hidden>
+                    <div class="student-header">
+                        <div class="student-fields">
+                            <label for="studentNameInput">Student</label>
+                            <input id="studentNameInput" type="text" autocomplete="off">
+                            <div id="selectedFileName" class="file-name"></div>
+                        </div>
+                        <div class="student-score">
+                            <span>Adjusted score</span>
+                            <strong id="adjustedTotal">0/24</strong>
+                            <small id="suggestedTotal">Suggested: 0/24</small>
+                        </div>
+                    </div>
+
+                    <div id="reviewAlert" class="review-alert" hidden></div>
+
+                    <div class="result-actions">
+                        <button class="button button-green" id="remarkButton" type="button">Re-mark</button>
+                        <button class="button button-outline" id="copyFeedbackButton" type="button">Copy feedback</button>
+                        <button class="button button-outline" id="downloadReportButton" type="button">Download report</button>
+                    </div>
+
+                    <section>
+                        <h2 class="section-title">Rubric evidence</h2>
+                        <div id="rubricResults" class="rubric-results"></div>
+                    </section>
+
+                    <section class="teacher-notes-section">
+                        <label for="teacherNotes"><strong>Teacher notes</strong></label>
+                        <textarea id="teacherNotes" rows="4" placeholder="Add any judgement, feedback or Moodle comment here…"></textarea>
+                    </section>
+
+                    <details class="test-details" open>
+                        <summary>Test runs</summary>
+                        <div id="testRuns"></div>
+                    </details>
+
+                    <details class="source-details">
+                        <summary>Submitted source code</summary>
+                        <pre id="sourceCode"></pre>
+                    </details>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <footer>
+        Automated scores are suggestions. Review the evidence and use professional judgement before entering the Moodle rubric grade.
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
