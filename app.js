@@ -56,7 +56,7 @@ function startWorker() {
         rejectWorkerReady = reject;
     });
 
-    worker = new Worker("marker-worker.js", { type: "module" });
+    worker = new Worker("marker-worker.js?v=1.0.1", { type: "module" });
 
     worker.onmessage = (event) => {
         const message = event.data;

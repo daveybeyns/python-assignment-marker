@@ -120,7 +120,6 @@ except SyntaxError as exc:
         "ok": False,
         "error": f"{exc.msg} ({location})"
     }
-    print(json.dumps(result))
 else:
     visitor = MarkerVisitor()
     visitor.visit(tree)
@@ -293,7 +292,7 @@ else:
             )
             result["tests"].append(test_result)
 
-    print(json.dumps(result))
+json.dumps(result)
 `;
 
 async function initialise() {
