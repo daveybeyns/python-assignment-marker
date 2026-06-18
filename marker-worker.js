@@ -459,6 +459,9 @@ else:
     if result["policy"]["safe"]:
         compiled = compile(tree, "submission.py", "exec")
         root = "/tmp/python_assignment_marker"
+        # Always leave the previous test directory before removing it.
+        # Pyodide can otherwise fail on every valid submission after the first.
+        os.chdir("/")
         if os.path.exists(root):
             shutil.rmtree(root)
         os.makedirs(root, exist_ok=True)
