@@ -1,0 +1,53 @@
+PYTHON ASSIGNMENT MARKER — TOPIC 2 UPDATE
+
+This update keeps the current Topic 1 marker and adds Topic 2 to the same GitHub Pages tool.
+
+FILES TO REPLACE IN GITHUB
+
+1. index.html
+2. styles.css
+3. app.js
+4. rubric.js
+5. marker-worker.js
+
+Do not rename the files.
+
+UPLOAD STEPS
+
+1. Open the existing python-assignment-marker repository on GitHub.
+2. Open the main Code page.
+3. Choose Add file, then Upload files.
+4. Drag in the five replacement files listed above.
+5. Confirm that GitHub shows them as replacements for existing files.
+6. Use a commit message such as:
+   Add Cinema Ticket assignment marker
+7. Commit to the same branch used by GitHub Pages.
+8. Wait briefly for GitHub Pages to publish.
+9. Open the existing marker URL and press Ctrl+F5 if the old version is cached.
+
+MOODLE
+
+The GitHub Pages URL has not changed, so the existing hidden Moodle iframe does not need changing.
+
+HOW TO USE IT
+
+1. Open the marker.
+2. Choose the correct assignment from Assignment to mark.
+3. Only then upload that assignment's Moodle ZIP.
+4. Select Mark all.
+5. Review and adjust the suggested rubric scores.
+
+Changing assignment clears any loaded submissions to prevent Topic 1 files being marked with the Topic 2 rubric.
+
+TOPIC 2 AUTOMATED TESTS
+
+The marker checks ages 11, 12, 17 and 18.
+It expects:
+- 11: Child, £5
+- 12: Teen, £7
+- 17: Teen, £7
+- 18: Adult, £10
+
+TEST PACK
+
+Use examples/example-topic2-moodle-submissions.zip after selecting Do It 2.
