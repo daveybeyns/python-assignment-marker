@@ -810,3 +810,17 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+
+.startup-error {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+    padding: 11px 13px;
+    border: 1px solid #e2a7a7;
+    border-left: 5px solid var(--red);
+    border-radius: 8px;
+    background: #fff4f4;
+    color: #7a1e1e;
+    font-size: 13px;
+    line-height: 1.5;
+}

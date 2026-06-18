@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive">
     <title>Python Assignment Marker</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260618d">
 </head>
 <body>
     <header class="app-header">
@@ -28,9 +28,16 @@
         <section class="assignment-panel" aria-labelledby="assignmentLabel">
             <div>
                 <label id="assignmentLabel" for="assignmentSelect">Assignment to mark</label>
-                <select id="assignmentSelect"></select>
+                <select id="assignmentSelect">
+                    <option value="learner-profile">Do It 1: Learner Profile Program</option>
+                    <option value="cinema-ticket">Do It 2: Cinema Ticket Program</option>
+                </select>
             </div>
-            <p id="assignmentSummary"></p>
+            <p id="assignmentSummary">Choose the assignment before uploading its Moodle submissions.</p>
+            <div id="startupError" class="startup-error" hidden>
+                The marker application did not initialise. Replace <strong>index.html</strong>,
+                <strong>app.js</strong> and <strong>marker-worker.js</strong> together, then refresh with Ctrl+F5.
+            </div>
         </section>
 
         <section class="upload-panel" id="dropZone">
@@ -124,6 +131,16 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script type="module" src="app.js"></script>
+    <script defer src="app.js?v=20260618d"></script>
+    <script>
+        window.addEventListener("load", function () {
+            window.setTimeout(function () {
+                if (document.documentElement.dataset.markerAppReady !== "true") {
+                    var warning = document.getElementById("startupError");
+                    if (warning) warning.hidden = false;
+                }
+            }, 1200);
+        });
+    </script>
 </body>
 </html>
