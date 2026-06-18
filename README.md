@@ -1,87 +1,126 @@
-# Python Assignment Marker
+# Python Assignment Marker — Dynamic Assignment Modules
 
-A browser-based lecturer marking assistant for the Moodle Python Crash Course.
+This is the modular version of the lecturer marking assistant used by the Moodle Python Crash Course.
 
-The same tool now supports:
+## Included assignments
 
 1. **Do It 1: Learner Profile Program**
 2. **Do It 2: Cinema Ticket Program**
+3. **Do It 3: Savings Tracker Program**
+4. **Do It 4: Study Session Analyser**
 
-Choose the assignment from the selector before adding Moodle submissions.
+The established interface and workflow are preserved:
 
-## What the Topic 2 update adds
+- Moodle ZIP and individual `.py` uploads
+- automatic student-name extraction
+- local Pyodide execution
+- suggested 0–4 rubric scores
+- manual score overrides
+- teacher notes
+- Copy feedback
+- CSV export
+- individual HTML reports
+- batch report ZIP export
 
-- An assignment selector at the top of the marker.
-- The existing Topic 1 checks and rubric remain available.
-- Four automated boundary tests for the Cinema Ticket Program:
-  - age 11
-  - age 12
-  - age 17
-  - age 18
-- Static checks for:
-  - two input calls
-  - `int()` casting
-  - comparison operators
-  - `if`, `elif` and `else`
-  - meaningful variables
-- Runtime checks for:
-  - correct Child / Teen / Adult ticket
-  - correct £5 / £7 / £10 price
-  - customer name in the output
-- Suggested scores for the six Topic 2 rubric criteria.
-- Manual score overrides, teacher notes, copied feedback, CSV export and HTML reports.
+## Modular structure
 
-## Privacy
+```text
+python-assignment-marker/
+├── index.html
+├── styles.css
+├── app.js
+├── marker-worker.js
+├── moodle-embed-snippet.html
+├── assignments/
+│   ├── do-it-1.js
+│   ├── do-it-2.js
+│   ├── do-it-3.js
+│   ├── do-it-4.js
+│   ├── do-it-5.js
+│   ├── ...
+│   ├── do-it-10.js
+│   └── assignment-template.js
+└── examples/
+    └── do-it-4/
+```
 
-- Student files are processed locally inside the browser.
-- Files and grades are not uploaded to a server by this page.
-- Closing or refreshing the page clears the current marking session.
+`app.js` and `marker-worker.js` are shared core files. Each assignment module contains its own:
 
-## Files
+- assignment identity and required filename
+- automated test inputs
+- rubric wording
+- scoring and evidence rules
+- optional direct function tests
+- optional file-handling test data
 
-- `index.html` — main interface and assignment selector
-- `styles.css` — lecturer-tool design
-- `app.js` — uploads, marking workflow, display and exports
-- `rubric.js` — both assignment definitions, tests, rubrics and scoring logic
-- `marker-worker.js` — Pyodide worker, AST checks and runtime tests
-- `moodle-embed-snippet.html` — optional Moodle iframe example
-- `.nojekyll` — ensures GitHub Pages serves the files directly
-- `examples/submissions/` — sample Topic 2 programs
-- `examples/example-topic2-moodle-submissions.zip` — Moodle-style test ZIP
+## Adding the next assignment
 
-## Updating the existing GitHub repository
+Files `do-it-5.js` through `do-it-10.js` are disabled placeholders.
 
-Upload and replace these five files in the current `python-assignment-marker` repository:
+To add Do It 5, replace only:
 
-- `index.html`
-- `styles.css`
-- `app.js`
-- `rubric.js`
-- `marker-worker.js`
+```text
+assignments/do-it-5.js
+```
 
-Do not rename them.
+A valid enabled module appears in the assignment dropdown automatically. No changes to `index.html`, `app.js` or `marker-worker.js` are normally required.
 
-The existing GitHub Pages address and Moodle iframe can stay the same.
+Use `assignment-template.js` as a structural reference. In practice, a complete assignment-specific module will be generated for each new course topic so its tests and rubric evidence match that assignment precisely.
 
-## Normal workflow
+## Shared worker capabilities
+
+The generic worker already gathers evidence for:
+
+- variables, constants and data types
+- input, prompts and casting
+- selection and comparisons
+- for loops, while loops and range
+- running totals
+- function definitions, parameters, calls and return statements
+- direct calls to named student functions
+- lists, dictionaries, sets, tuples and subscripting
+- method calls
+- string operations
+- try, except and raise
+- classes and methods, including `__init__`
+- file reading and writing when enabled by an assignment module
+- generated output files
+
+For a File Handling assignment, the module can set:
+
+```javascript
+workerOptions: {
+    allowOpen: true
+}
+```
+
+## Publishing
+
+Upload the complete package to the existing public GitHub repository and preserve the `assignments` folder paths.
+
+The existing address remains:
+
+```text
+https://daveybeyns.github.io/python-assignment-marker/
+```
+
+The existing hidden Moodle iframe does not need changing.
+
+## Testing Do It 4
 
 1. Open the marker.
-2. Select the assignment being marked.
-3. Download all submissions from the matching Moodle assignment.
-4. Drop the Moodle ZIP onto the marker.
-5. Select **Mark all**.
-6. Review each test run and each suggested rubric score.
-7. Override scores where professional judgement differs.
-8. Add teacher notes and copy feedback to Moodle.
-9. Export the CSV or report ZIP before closing the page.
+2. Select **Do It 4: Study Session Analyser**.
+3. Upload:
 
-## Testing Topic 2
+```text
+examples/do-it-4/example-do-it-4-moodle-submissions.zip
+```
 
-1. Select **Do It 2: Cinema Ticket Program**.
-2. Upload `examples/example-topic2-moodle-submissions.zip`.
-3. Select **Mark all**.
-4. Confirm that the examples produce a range of strong, boundary-error, no-cast, hard-coded and syntax-error outcomes.
+4. Select **Mark all**.
+5. Confirm that the model solution receives **24/24**.
+6. Confirm that the other examples receive varied lower scores and review warnings.
+7. Test manual overrides, notes, feedback copying and exports.
 
-## Limitations
+## Privacy and professional judgement
 
-The tool provides evidence and suggested scores. It cannot reliably judge every valid coding style, the true quality of variable names or all aspects of readability. The lecturer must confirm the final rubric grade.
+Submissions are processed inside the browser and are not uploaded by the marker page. Automated results are suggested evidence only. The lecturer must review the submission and confirm the final rubric grade.

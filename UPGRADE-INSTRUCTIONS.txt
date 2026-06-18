@@ -1,0 +1,92 @@
+PYTHON ASSIGNMENT MARKER — DYNAMIC MODULE UPGRADE
+
+This is a full replacement package for the existing GitHub Pages repository.
+
+WHAT THIS UPDATE DOES
+
+- Preserves Do It 1, Do It 2 and Do It 3.
+- Adds Do It 4: Study Session Analyser.
+- Replaces the separate Topic 3 extension and specialist worker.
+- Uses one shared marker core and one assignment module per Do It task.
+- Preserves Moodle ZIP uploads, student-name extraction, suggested rubric scores,
+  manual overrides, notes, copied feedback, CSV export and report downloads.
+- Provides disabled placeholders for Do It 5 through Do It 10.
+
+BACK UP THE CURRENT REPOSITORY FIRST
+
+On GitHub, download a ZIP backup of the current python-assignment-marker repository
+before replacing files.
+
+FILES AND FOLDERS TO UPLOAD
+
+Upload all of these to the root of the existing repository:
+
+- index.html
+- styles.css
+- app.js
+- marker-worker.js
+- moodle-embed-snippet.html
+- README.md
+- TEST-RESULTS.txt
+- .nojekyll
+- assignments folder
+- examples folder
+
+The folder paths must be preserved. For example:
+
+assignments/do-it-4.js
+assignments/do-it-5.js
+
+Do not upload the files from inside the assignments folder into the repository root.
+
+OLD FILES
+
+The new index page no longer loads:
+
+- rubric.js
+- topic3-extension.js
+- topic3-marker-worker.js
+
+Delete these after the new version has been tested. They can be left temporarily,
+but they are obsolete and may cause confusion later.
+
+GITHUB UPLOAD STEPS
+
+1. Open the existing python-assignment-marker repository.
+2. Choose Add file > Upload files.
+3. Upload the replacement root files.
+4. Upload the complete assignments folder and examples folder, preserving paths.
+5. Confirm that index.html, app.js, styles.css and marker-worker.js are replacements,
+   not duplicated files with altered names.
+6. Commit to the branch used by GitHub Pages.
+7. Wait for GitHub Pages to redeploy.
+8. Open:
+   https://daveybeyns.github.io/python-assignment-marker/
+9. Press Ctrl+F5 to bypass the old browser cache.
+
+TESTING
+
+1. Confirm the assignment dropdown contains Do It 1, 2, 3 and 4.
+2. Test one known submission for each of Do It 1–3.
+3. Select Do It 4.
+4. Upload:
+   examples/do-it-4/example-do-it-4-moodle-submissions.zip
+5. Select Mark all.
+6. Confirm the model solution receives 24/24.
+7. Confirm the remaining examples produce varied lower suggested grades.
+8. Test manual overrides, teacher notes, Copy feedback, CSV export, individual
+   report download and batch report ZIP.
+
+MOODLE
+
+The GitHub Pages address is unchanged. The existing hidden Moodle iframe does not
+need changing.
+
+FUTURE ASSIGNMENTS
+
+For Do It 5, replace only:
+
+assignments/do-it-5.js
+
+The same method applies through Do It 10. The shared app and worker should remain
+unchanged unless a future assignment introduces a genuinely new technical capability.

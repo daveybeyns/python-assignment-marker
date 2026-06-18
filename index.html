@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive">
     <title>Python Assignment Marker</title>
-    <link rel="stylesheet" href="styles.css?v=20260618g">
+    <link rel="stylesheet" href="styles.css?v=20260618m">
 </head>
 <body>
     <header class="app-header">
         <div>
             <div class="header-kicker"><span class="tool-badge">LECTURER TOOL</span> Python Crash Course</div>
             <h1>Python Assignment Marker</h1>
-            <p id="headerAssignmentTitle">Do It 1: Learner Profile Program</p>
+            <p id="headerAssignmentTitle">Loading assignment modules…</p>
         </div>
         <div class="runtime-status" id="runtimeStatus" aria-live="polite">
             <span class="status-dot status-loading"></span>
@@ -28,15 +28,14 @@
         <section class="assignment-panel" aria-labelledby="assignmentLabel">
             <div>
                 <label id="assignmentLabel" for="assignmentSelect">Assignment to mark</label>
-                <select id="assignmentSelect">
-                    <option value="learner-profile">Do It 1: Learner Profile Program</option>
-                    <option value="cinema-ticket">Do It 2: Cinema Ticket Program</option>
+                <select id="assignmentSelect" disabled>
+                    <option>Loading assignments…</option>
                 </select>
             </div>
-            <p id="assignmentSummary">Choose the assignment before uploading its Moodle submissions.</p>
+            <p id="assignmentSummary">Loading the available assignment definitions and rubrics.</p>
             <div id="startupError" class="startup-error" hidden>
-                The marker application did not initialise. Replace <strong>index.html</strong>,
-                <strong>app.js</strong> and <strong>marker-worker.js</strong> together, then refresh with Ctrl+F5.
+                The marker application did not initialise. Upload the complete replacement package,
+                preserve the <strong>assignments</strong> folder, then refresh with Ctrl+F5.
             </div>
         </section>
 
@@ -131,8 +130,7 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script defer src="app.js?v=20260618g"></script>
-    <script defer src="topic3-extension.js?v=20260618a"></script>
+    <script type="module" src="app.js?v=20260618m"></script>
     <script>
         window.addEventListener("load", function () {
             window.setTimeout(function () {
@@ -140,7 +138,7 @@
                     var warning = document.getElementById("startupError");
                     if (warning) warning.hidden = false;
                 }
-            }, 1200);
+            }, 2500);
         });
     </script>
 </body>

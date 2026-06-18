@@ -1,0 +1,27 @@
+PYTHON ASSIGNMENT MARKER — BUILD TEST RESULTS
+
+Completed checks:
+
+1. JavaScript syntax
+   - app.js: passed
+   - marker-worker.js: passed
+   - all assignment modules and placeholders: passed
+
+2. Model-solution scoring through the shared generic worker and assignment modules
+   - Do It 1: 24/24
+   - Do It 2: 24/24
+   - Do It 3: 24/24
+   - Do It 4: 24/24
+
+3. Do It 4 varied examples
+   - model solution: 24/24
+   - correct output without required functions: 9/24
+   - target boundary error: 21/24
+   - functions print instead of return: 14/24
+   - syntax error: 0/24
+
+4. Future-capability smoke tests
+   - class definition with __init__: executed successfully
+   - file write/read with allowOpen enabled: executed successfully
+
+Automated results remain suggestions and require lecturer review.
