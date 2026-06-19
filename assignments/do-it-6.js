@@ -1,6 +1,7 @@
-// Do It 6 calibrated marker — version 20260619c
+// Do It 6 calibrated marker — version 20260619d
 const assignment = {
   enabled: true,
+  markerVersion: "20260619d",
   number: 6,
   id: "message-analyser",
   shortName: "Do It 6",
