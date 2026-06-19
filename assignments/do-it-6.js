@@ -1,3 +1,4 @@
+// Do It 6 calibrated marker — version 20260619c
 const assignment = {
   enabled: true,
   number: 6,
