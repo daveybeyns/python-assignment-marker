@@ -1,7 +1,7 @@
-// Do It 6 calibrated marker — version 20260619d
+// Do It 6 corrected main-call detection — version 20260619g
 const assignment = {
   enabled: true,
-  markerVersion: "20260619d",
+  markerVersion: "20260619g",
   number: 6,
   id: "message-analyser",
   shortName: "Do It 6",
@@ -328,9 +328,21 @@ function assess(raw, helpers, source, assignment) {
   const mainCalls = helperNames.filter((name) =>
     callSites.some((site) => site.caller === "main" && site.callee === name)
   );
-  const mainCalled = callSites.some(
+  const mainCalledByAst = callSites.some(
     (site) => site.caller === "" && site.callee === "main"
   );
+
+  // Some worker/browser combinations do not report a main() call when it is
+  // inside the standard __name__ guard. Fall back to the submitted source so
+  // correct programs are not under-awarded.
+  const mainCalledBySource =
+    sourceHas(
+      source,
+      /if\s+__name__\s*==\s*["']__main__["']\s*:\s*(?:\r?\n[ \t]+)+main\s*\(\s*\)/m
+    ) ||
+    sourceHas(source, /(?:^|\n)main\s*\(\s*\)\s*(?:#.*)?(?:\r?\n|$)/m);
+
+  const mainCalled = mainCalledByAst || mainCalledBySource;
 
   // 1. Program structure and required functions
   let structureScore = 0;
@@ -364,7 +376,7 @@ function assess(raw, helpers, source, assignment) {
       ),
       helpers.evidence(
         mainCalled ? "pass" : "fail",
-        `main() ${mainCalled ? "is called at module level" : "was not clearly called at the end of the program"}.`
+        `main() ${mainCalled ? "is called at the end of the program" : "was not clearly called at the end of the program"}.`
       ),
       helpers.evidence(
         fullyCorrect === assignment.testCases.length ? "pass" : "warn",
