@@ -2,7 +2,7 @@
 
 const ASSIGNMENTS = {};
 let DEFAULT_ASSIGNMENT_ID = null;
-const MODULE_VERSION = "20260623a";
+const MODULE_VERSION = "20260623b";
 
 function evidence(status, text) {
     return { status, text };
